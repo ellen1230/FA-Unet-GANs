@@ -26,7 +26,7 @@ class FaceAging(object):
 
                  size_gen=512, # number of channels of the generator's start layer
                  # num_gen_channels=[512, 256, 128, 64, 3],  # number of channels of every deconv layers of generator
-                 num_gen_channels=[512, 512, 512, 256, 128, 64, 3],  # number of channels of every deconv layers of generator
+                 num_gen_channels=[(512, 0.5), (512, 0.5), (512, 0.5), (256, 0), (128, 0), (64, 0), (3, 0)],  # number of channels of every deconv layers of generator
 
                  num_Dz_channels=[128, 64, 32, 16, 1],  # number of channels of every conv layers of discriminator_z
 
