@@ -1,5 +1,5 @@
 from keras.layers import Input, Dense, BatchNormalization, initializers, Concatenate, Lambda
-from keras.layers.core import Activation, Reshape, Flatten
+from keras.layers.core import Activation, Reshape, Flatten, Dropout
 
 from keras.layers.convolutional import UpSampling2D, Conv2D, Conv2DTranspose
 
@@ -92,9 +92,10 @@ def generator_pix2pix_model(size_image, size_age_label, size_name_label, size_ge
     res_list = []
     for i in range(len(num_encoder_channels)):
         name = 'E_conv' + str(i)
+        kernel_size_change = max(size_kernel - i, 2)
         current = Conv2D(
             filters=num_encoder_channels[i],
-            kernel_size=(size_kernel, size_kernel),
+            kernel_size=(kernel_size_change, kernel_size_change),
             strides=(2, 2),
             padding='same',
             kernel_initializer=kernel_initializer,
@@ -104,12 +105,11 @@ def generator_pix2pix_model(size_image, size_age_label, size_name_label, size_ge
         current = Lambda(lrelu, output_shape=(size_image, size_image, int(current.shape[3])))(current)
         current = Lambda(tf.contrib.layers.batch_norm, output_shape=(size_image, size_image, int(current.shape[3])),
                          arguments={'decay': 0.9, 'epsilon': 1e-5, 'scale': True})(current)
-        # res_list.append(Model(inputs=[input_images, input_ages_conv, input_names_conv, input_genders_conv], outputs=current))
         res_list.append(current)
 
     # G_deconv layer + Batch Normalization + relu/tanh
     size_current = current.shape[1].value
-    for i in range(len(num_gen_channels)):
+    for (i, dropout) in enumerate(num_gen_channels):
 
         # Residual Block ---------------> every E_conv layer has 3 mini layers(E_conv + lambda:lrelu + lambda:BN)
         if i > 0:
@@ -118,9 +118,10 @@ def generator_pix2pix_model(size_image, size_age_label, size_name_label, size_ge
             current = Concatenate(axis=-1)([current, res_list[-1-i]])
 
         name = 'G_deconv' + str(i)
+        kernel_size_change = max(size_kernel - (len(num_gen_channels)-1- i), 2)
         current = Conv2DTranspose(
             filters=num_gen_channels[i],
-            kernel_size=(size_kernel, size_kernel),
+            kernel_size=(kernel_size_change, kernel_size_change),
             padding='same',
             strides=(2, 2),
             kernel_initializer=kernel_initializer,
@@ -129,6 +130,9 @@ def generator_pix2pix_model(size_image, size_age_label, size_name_label, size_ge
         size_current = size_current * 2
         current = Lambda(tf.contrib.layers.batch_norm, output_shape=(size_current, size_current, int(current.shape[3])),
                          arguments={'decay':0.9, 'epsilon': 1e-5, 'scale':True})(current)
+        if dropout > 0.0:
+            current = Dropout(rate=dropout)
+
         if i == len(num_gen_channels)-1:
             current = Activation(activation='tanh')(current)
         else:
