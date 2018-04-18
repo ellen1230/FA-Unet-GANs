@@ -18,6 +18,7 @@ flags.DEFINE_string(flag_name='loss_weights', default_value=[0, 0, 1, 5000],
 flags.DEFINE_string(flag_name='num_GPU', default_value=1, docstring='GPU number')
 flags.DEFINE_string(flag_name='num_D_img_loss', default_value=1, docstring='D_img_loss training number')
 flags.DEFINE_string(flag_name='num_all_loss', default_value=1, docstring='all_loss training number')
+flags.DEFINE_string(flag_name='GANs', default_value='LSGAN', docstring='select from [cGAN, LSGAN]')
 
 
 flags.DEFINE_string(flag_name='size_name_total', default_value=140, docstring='size of total name')
@@ -54,7 +55,8 @@ if __name__ == '__main__':
         loss_weights = FLAGS.loss_weights,
         num_GPU = FLAGS.num_GPU,
         num_D_img_loss=FLAGS.num_D_img_loss,
-        num_all_loss=FLAGS.num_all_loss
+        num_all_loss=FLAGS.num_all_loss,
+        GANs=FLAGS.GANs
     )
     if FLAGS.is_train:
         print('\n\tTraining Mode')

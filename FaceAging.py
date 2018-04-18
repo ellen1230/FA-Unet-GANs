@@ -49,7 +49,8 @@ class FaceAging(object):
                  loss_weights=[0, 0, 0, 0],
                  num_GPU=2,
                  num_D_img_loss=1,
-                 num_all_loss=1
+                 num_all_loss=1,
+                 GANs='cGAN'
                  ):
         self.image_value_range = (-1, 1)
         self.size_image = size_image
@@ -79,6 +80,7 @@ class FaceAging(object):
         self.num_GPU = num_GPU
         self.num_D_img_loss = num_D_img_loss
         self.num_all_loss = num_all_loss
+        self.GANs = GANs
 
         print("\n\tBuilding the graph...")
 
@@ -149,11 +151,19 @@ class FaceAging(object):
         # loss model of encoder + generator
         self.G_model.compile(optimizer=adam_G, loss='mean_squared_error')
 
-        # loss model of discriminator on generated image
-        self.GD_model.compile(optimizer=adam_GD, loss='binary_crossentropy')
-        # loss model of discriminator on generated + real image
-        self.D_img_model.trainable = True
-        self.D_img_model.compile(optimizer=adam_D_img, loss='binary_crossentropy')
+        if self.GANs == 'cGAN':
+            # loss model of discriminator on generated image
+            self.GD_model.compile(optimizer=adam_GD, loss='binary_crossentropy')
+            # loss model of discriminator on generated + real image
+            self.D_img_model.trainable = True
+            self.D_img_model.compile(optimizer=adam_D_img, loss='binary_crossentropy')
+        elif self.GANs == 'LSGAN':
+            # LSGAN argument: a=c=1 ，b=0
+            # loss model of discriminator on generated image
+            self.GD_model.compile(optimizer=adam_GD, loss='mean_squared_error')
+            # loss model of discriminator on generated + real image
+            self.D_img_model.trainable = True
+            self.D_img_model.compile(optimizer=adam_D_img, loss='mean_squared_error')
 
 
     def train(self,
