@@ -50,7 +50,8 @@ class FaceAging(object):
                  num_GPU=2,
                  num_D_img_loss=1,
                  num_all_loss=1,
-                 GANs='cGAN'
+                 GANs='cGAN',
+                 G_net='Unet'
                  ):
         self.image_value_range = (-1, 1)
         self.size_image = size_image
@@ -81,6 +82,7 @@ class FaceAging(object):
         self.num_D_img_loss = num_D_img_loss
         self.num_all_loss = num_all_loss
         self.GANs = GANs
+        self.G_net = G_net
 
         print("\n\tBuilding the graph...")
 
@@ -99,7 +101,8 @@ class FaceAging(object):
             size_kernel=self.size_kernel,
             num_input_channels=self.num_input_channels,
             num_encoder_channels=self.num_encoder_channels,
-            num_gen_channels=self.num_gen_channels
+            num_gen_channels=self.num_gen_channels,
+            G_net=self.G_net
         )
 
         # discriminator model on G
