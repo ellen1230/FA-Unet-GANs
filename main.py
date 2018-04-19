@@ -8,18 +8,18 @@ flags.DEFINE_integer(flag_name='epoch', default_value=200, docstring='number of 
 flags.DEFINE_integer(flag_name='size_image', default_value=128, docstring='size of an image')
 flags.DEFINE_string(flag_name='size_batch', default_value=1, docstring='size of one batch')
 flags.DEFINE_string(flag_name='size_name', default_value=1, docstring='size of name array, 140 or 1')
-# flags.DEFINE_string(flag_name='path_data', default_value='./data', docstring='upper dir of dataset')
-# flags.DEFINE_string(flag_name='dataset_name', default_value='CACD', docstring='dataset name')
-flags.DEFINE_string(flag_name='path_data', default_value='/home/shwang_1/dataset/CACD_data', docstring='upper dir of dataset')
-flags.DEFINE_string(flag_name='dataset_name', default_value='128_1033_CACD', docstring='dataset name')
+flags.DEFINE_string(flag_name='path_data', default_value='./data', docstring='upper dir of dataset')
+flags.DEFINE_string(flag_name='dataset_name', default_value='CACD', docstring='dataset name')
+# flags.DEFINE_string(flag_name='path_data', default_value='/home/shwang_1/dataset/CACD_data', docstring='upper dir of dataset')
+# flags.DEFINE_string(flag_name='dataset_name', default_value='128_1033_CACD', docstring='dataset name')
 flags.DEFINE_string(flag_name='sample_dir', default_value='128_sample', docstring='sample images for save')
-flags.DEFINE_string(flag_name='loss_weights', default_value=[0, 0, 1, 5000],
+flags.DEFINE_string(flag_name='loss_weights', default_value=[0, 0, 1, 10],
                     docstring='loss weights: D_fake loss, D_real_loss, GD_loss, ReImage_loss')
 flags.DEFINE_string(flag_name='num_GPU', default_value=1, docstring='GPU number')
 flags.DEFINE_string(flag_name='num_D_img_loss', default_value=1, docstring='D_img_loss training number')
 flags.DEFINE_string(flag_name='num_all_loss', default_value=1, docstring='all_loss training number')
 flags.DEFINE_string(flag_name='GANs', default_value='LSGAN', docstring='select from [cGAN, LSGAN]')
-flags.DEFINE_string(flag_name='G_net', default_value='Unet', docstring='select from [Unet, Resnet]')
+flags.DEFINE_string(flag_name='G_net', default_value='Resnet', docstring='select from [Unet, Resnet]')
 
 
 flags.DEFINE_string(flag_name='size_name_total', default_value=140, docstring='size of total name')

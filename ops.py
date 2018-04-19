@@ -119,8 +119,9 @@ def save_image(images, size_image, image_value_range, num_input_channels, epoch,
 
 
 
-    picture = ((picture + 1)/2 * 255.0).astype(np.uint8)
-    path = str(image_path)  + "/e" + str(epoch) + 'b' + str(batch) + ".jpg"
+    # picture = ((picture + 1)/2 * 255.0).astype(np.uint8)
+    picture = ((picture + 1) / 2).astype(np.float32)
+    path = str(image_path)  + "/e" + str(epoch) + 'b' + str(batch) + ".png"
     imsave(path, picture)
 
 
@@ -293,8 +294,8 @@ def get_age_name_gender_list(file_names, size_batch, size_age, size_name, size_g
     age_list, name_list, gender_list = [], [], []
     for i, label in enumerate(file_names):
 
-        temp = str(file_names[i]).split('/')[-1]
-        #temp = str(file_names[i]).split('\\')[-1]
+        # temp = str(file_names[i]).split('/')[-1]
+        temp = str(file_names[i]).split('\\')[-1]
         age = int(temp.split('_')[0])
         name = temp[temp.index('_') + 1: temp.index('00') - 1]
         age = age_group_label(age)
@@ -414,4 +415,5 @@ def draw_loss_metric(save_dir, npy_name):
 
 
 if __name__ == '__main__':
-    draw_loss_metric('./save/metric/', 'loss_Dimg', [0.05,0,0,1,450])
+    image = imread('D:\\workspace\\tensorflow\\FA-Unet-GANs\\data\\128_sample\\24_Michael_Cera_0004.jpg').astype(np.float32)
+    save_image(image, 128, (-1, 1), 3, 0, 0, None, 'D:/')

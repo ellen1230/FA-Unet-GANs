@@ -1,4 +1,6 @@
+# -*- coding: UTF-8 -*
 import generator, gan, discriminator, loss
+import tensorflow as tf
 from ops import load_image, age_group_label, duplicate, \
     concat_label, save_image, save_weights, save_loss, \
     draw_loss_metric, get_age_name_gender_list
@@ -8,6 +10,7 @@ from glob import glob
 import os
 import numpy as np
 from keras.utils import multi_gpu_model
+
 
 class FaceAging(object):
     def __init__(self,
@@ -128,45 +131,53 @@ class FaceAging(object):
         # self.D_img_model = multi_gpu_model(self.D_img_model, gpus=self.num_GPU)
         # self.GD_model = multi_gpu_model(self.GD_model, gpus=self.num_GPU)
 
+        # ****************************** learning_rate ***********************************
+        learning_rate = 0.0002
+        decay_rate = 1.0
+        global_step = 0
+        all_learning_rate = tf.train.exponential_decay(
+            learning_rate=learning_rate,
+            global_step=global_step,
+            decay_steps=516,
+            decay_rate=decay_rate,
+            staircase=True
+        )
+
+        # ************************************* optimizer *******************************************
+        adam_G = Adam(lr=all_learning_rate, beta_1=0.5)
+        adam_GD = Adam(lr=all_learning_rate, beta_1=0.5)
+        adam_D_img = Adam(lr=all_learning_rate, beta_1=0.5)
+        adam_loss = Adam(lr=all_learning_rate, beta_1=0.5, beta_2=0.99)
+
+        # ************************************* Compile loss  *******************************************************
         # ************************** EGD weighted loss *************************************
+        # ******************* seperate model **********************
         if self.loss_weights[0] == 0:
             self.loss_Model = loss.loss_seperate_model(
                 self.size_image, self.size_age, self.size_name, self.size_gender, self.num_input_channels,
-                self.G_model, self.D_img_model)
-            adam_loss = Adam(lr=0.0001, beta_1=0.5, beta_2=0.99)
+                self.G_model, self.D_img_model, self.GANs)
             self.loss_Model.compile(optimizer=adam_loss, loss=lambda y_true, y_pred: y_pred,
                                     loss_weights=[self.loss_weights[2], self.loss_weights[3]])
+            if self.GANs == 'cGAN':
+                # loss model of discriminator on generated + real image
+                self.D_img_model.trainable = True
+                self.D_img_model.compile(optimizer=adam_D_img, loss='binary_crossentropy')
+            elif self.GANs == 'LSGAN':
+                # LSGAN argument: a=c=1 ，b=0
+                # loss model of discriminator on generated + real image
+                self.D_img_model.trainable = True
+                self.D_img_model.compile(optimizer=adam_D_img, loss='mean_squared_error')
+
+        # ************************** all model **********************
         else:
             self.loss_Model = loss.loss_all_model(
                 self.size_image, self.size_age, self.size_name, self.size_gender, self.num_input_channels,
-                self.G_model, self.D_img_model)
-            adam_loss = Adam(lr=0.0001, beta_1=0.5, beta_2=0.99)
+                self.G_model, self.D_img_model, self.GANs)
             self.loss_Model.compile(optimizer=adam_loss, loss=lambda y_true, y_pred: y_pred, loss_weights=self.loss_weights)
 
 
-
-        # ************************************* optimizer *******************************************
-        adam_G = Adam(lr=0.0002, beta_1=0.5)
-        adam_GD = Adam(lr=0.0001, beta_1=0.5)
-        adam_D_img = Adam(lr=0.0001, beta_1=0.5)
-
-        # ************************************* Compile loss  *******************************************************
         # loss model of encoder + generator
         self.G_model.compile(optimizer=adam_G, loss='mean_squared_error')
-
-        if self.GANs == 'cGAN':
-            # loss model of discriminator on generated image
-            self.GD_model.compile(optimizer=adam_GD, loss='binary_crossentropy')
-            # loss model of discriminator on generated + real image
-            self.D_img_model.trainable = True
-            self.D_img_model.compile(optimizer=adam_D_img, loss='binary_crossentropy')
-        elif self.GANs == 'LSGAN':
-            # LSGAN argument: a=c=1 ，b=0
-            # loss model of discriminator on generated image
-            self.GD_model.compile(optimizer=adam_GD, loss='mean_squared_error')
-            # loss model of discriminator on generated + real image
-            self.D_img_model.trainable = True
-            self.D_img_model.compile(optimizer=adam_D_img, loss='mean_squared_error')
 
 
     def train(self,
@@ -217,7 +228,8 @@ class FaceAging(object):
                 batch_real_label_name_conv = np.reshape(batch_real_label_name, [len(batch_real_label_name), 1, 1, batch_real_label_name.shape[-1]])
                 batch_real_label_gender_conv = np.reshape(batch_real_label_gender, [len(batch_real_label_gender), 1, 1, batch_real_label_gender.shape[-1]])
 
-                batch_fake_image = self.G_model.predict([batch_real_images, batch_real_label_age_conv, batch_real_label_name_conv, batch_real_label_gender_conv])
+                batch_random = np.random.uniform(self.image_value_range[0], self.image_value_range[1], size=batch_real_images.shape)
+                batch_fake_image = self.G_model.predict([batch_random, batch_real_label_age_conv, batch_real_label_name_conv, batch_real_label_gender_conv])
                 num_D_last_channel = int(self.size_image / 2 ** len(self.num_Dimg_channels))
 
                 for D in range(int(self.num_D_img_loss)):
@@ -285,7 +297,7 @@ class FaceAging(object):
 
                     num_sample = len(sample_images)
                     fake_age = np.zeros((num_sample, self.size_age))
-                    fake_age[:, 4] = 1
+                    fake_age[:, 6] = 1
                     fake_age_conv = np.reshape(fake_age, [len(fake_age), 1, 1, fake_age.shape[-1]])
                     fake_name = np.zeros((num_sample, self.size_name))
                     if int(self.size_name) > 1:
