@@ -1,7 +1,7 @@
 from keras.layers import Input, Dense, BatchNormalization, initializers, Concatenate, Lambda
 from keras.layers.core import Activation, Reshape, Flatten, Dropout
 
-from keras.layers.convolutional import UpSampling2D, Conv2D, Conv2DTranspose
+from keras.layers.convolutional import UpSampling2D, Conv2D, Conv2DTranspose, ZeroPadding2D
 
 from keras.models import Model
 import tensorflow as tf
@@ -162,10 +162,12 @@ def generator_pix2pix_model(size_image, size_age_label, size_name_label, size_ge
         for i, (filter, dropout) in enumerate(num_gen_channels):
 
             # Residual Block ---------------> every E_conv layer has 3 mini layers(E_conv + lambda:lrelu + lambda:BN)
-            if i > 1:
+            if i > 1 and i < len(num_gen_channels) - 1:
                 # res_output = res_list[-1 - i](inputs=[input_images, input_ages_conv, input_names_conv, input_genders_conv])
                 # current = Concatenate(axis=-1)([current, res_output])
-                current = Concatenate(axis=-1)([current, res_list[i - 2]])
+                num_padding = int(2 ** (i - 1)/2)
+                res_block = ZeroPadding2D(padding=(num_padding, num_padding))(res_list[i - 2])
+                current = Concatenate(axis=-1)([current, res_block])
 
             name = 'G_deconv' + str(i)
             kernel_size_change = max(size_kernel - (len(num_gen_channels) - 1 - i), 2)
