@@ -98,14 +98,14 @@ def discriminator_img_model(
             current = Lambda(tf.contrib.layers.batch_norm, output_shape=(size_current, size_current, int(current.shape[3])),
                              arguments={'decay':0.9, 'epsilon': 1e-5, 'scale':True})(current)
         current = Lambda(lrelu, output_shape=(size_current, size_current, int(current.shape[3])))(current)
-        if i < num_layers - 1:
-            input_ages_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_age_label),
-                                            arguments={'times': size_current})(input_ages_conv)  # (128, 128, 10*tile_ratio)
-            input_names_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_name_label),
-                                             arguments={'times': size_current})(input_names_conv)
-            input_genders_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_gender_label),
-                                               arguments={'times': size_current})(input_genders_conv)
-            current = Concatenate(axis=-1)([current, input_ages_conv_repeat, input_names_conv_repeat, input_genders_conv_repeat])
+        # if i < num_layers - 1:
+        #     input_ages_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_age_label),
+        #                                     arguments={'times': size_current})(input_ages_conv)  # (128, 128, 10*tile_ratio)
+        #     input_names_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_name_label),
+        #                                      arguments={'times': size_current})(input_names_conv)
+        #     input_genders_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_gender_label),
+        #                                        arguments={'times': size_current})(input_genders_conv)
+        #     current = Concatenate(axis=-1)([current, input_ages_conv_repeat, input_names_conv_repeat, input_genders_conv_repeat])
 
     # Patch GAN_D
     # name = 'D_img_conv_final'

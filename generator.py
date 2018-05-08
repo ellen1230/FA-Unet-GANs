@@ -1,4 +1,4 @@
-from keras.layers import Input, Dense, BatchNormalization, initializers, Concatenate, Lambda
+from keras.layers import Input, Dense, BatchNormalization, initializers, Concatenate, Lambda, Multiply
 from keras.layers.core import Activation, Reshape, Flatten, Dropout
 
 from keras.layers.convolutional import UpSampling2D, Conv2D, Conv2DTranspose, ZeroPadding2D
@@ -109,16 +109,16 @@ def generator_pix2pix_model(size_image, size_age_label, size_name_label, size_ge
                              arguments={'decay': 0.9, 'epsilon': 1e-5, 'scale': True})(current)
             res_list.append(current)
 
-            if size_current > 1:
-                input_ages_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_age_label),
-                                                arguments={'times': size_current})(input_ages_conv)
-                input_names_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_name_label),
-                                                 arguments={'times': size_current})(input_names_conv)
-                input_genders_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_gender_label),
-                                                   arguments={'times': size_current})(input_genders_conv)
-                current = Concatenate(axis=-1)([current, input_ages_conv_repeat, input_names_conv_repeat, input_genders_conv_repeat])
-            else:
-                current = Concatenate(axis=-1)([current, input_ages_conv, input_names_conv, input_genders_conv])
+            # if size_current > 1:
+            #     input_ages_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_age_label),
+            #                                     arguments={'times': size_current})(input_ages_conv)
+            #     input_names_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_name_label),
+            #                                      arguments={'times': size_current})(input_names_conv)
+            #     input_genders_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_gender_label),
+            #                                        arguments={'times': size_current})(input_genders_conv)
+            #     current = Concatenate(axis=-1)([current, input_ages_conv_repeat, input_names_conv_repeat, input_genders_conv_repeat])
+            # else:
+            #     current = Concatenate(axis=-1)([current, input_ages_conv, input_names_conv, input_genders_conv])
 
         # G_deconv layer + Batch Normalization + relu/tanh
         size_current = current.shape[1].value
@@ -129,7 +129,7 @@ def generator_pix2pix_model(size_image, size_age_label, size_name_label, size_ge
                 current = Concatenate(axis=-1)([current, res_list[-1-i]])
 
             name = 'G_deconv' + str(i)
-            kernel_size_change = max(size_kernel - (len(num_gen_channels)-1- i), 2)
+            kernel_size_change = max(size_kernel - (len(num_gen_channels) - 1 - i), 2)
             current = Conv2DTranspose(
                 filters=filter,
                 kernel_size=(kernel_size_change, kernel_size_change),
@@ -139,8 +139,10 @@ def generator_pix2pix_model(size_image, size_age_label, size_name_label, size_ge
                 bias_initializer=bias_initializer,
                 name=name)(current)
             size_current = size_current * 2
-            current = Lambda(tf.contrib.layers.batch_norm, output_shape=(size_current, size_current, int(current.shape[3])),
-                             arguments={'decay':0.9, 'epsilon': 1e-5, 'scale':True})(current)
+            current = Lambda(tf.contrib.layers.batch_norm,
+                             output_shape=(size_current, size_current, int(current.shape[3])),
+                             arguments={'decay': 0.9, 'epsilon': 1e-5, 'scale': True})(current)
+
             if dropout > 0.0:
                 current = Dropout(rate=dropout)(current)
 
@@ -149,16 +151,16 @@ def generator_pix2pix_model(size_image, size_age_label, size_name_label, size_ge
             else:
                 current = Activation(activation='relu')(current)
 
-            if size_current > 1 and size_current < size_image:
-                input_ages_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_age_label),
-                                                arguments={'times': size_current})(input_ages_conv)
-                input_names_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_name_label),
-                                                 arguments={'times': size_current})(input_names_conv)
-                input_genders_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_gender_label),
-                                                   arguments={'times': size_current})(input_genders_conv)
-                current = Concatenate(axis=-1)([current, input_ages_conv_repeat, input_names_conv_repeat, input_genders_conv_repeat])
-            elif size_current == 1:
-                current = Concatenate(axis=-1)([current, input_ages_conv, input_names_conv, input_genders_conv])
+            # if size_current > 1 and size_current < size_image:
+            #     input_ages_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_age_label),
+            #                                     arguments={'times': size_current})(input_ages_conv)
+            #     input_names_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_name_label),
+            #                                      arguments={'times': size_current})(input_names_conv)
+            #     input_genders_conv_repeat = Lambda(duplicate_conv, output_shape=(size_current, size_current, size_gender_label),
+            #                                        arguments={'times': size_current})(input_genders_conv)
+            #     current = Concatenate(axis=-1)([current, input_ages_conv_repeat, input_names_conv_repeat, input_genders_conv_repeat])
+            # elif size_current == 1:
+            #     current = Concatenate(axis=-1)([current, input_ages_conv, input_names_conv, input_genders_conv])
 
     elif G_net == 'Resnet':
         # E_conv layer + lrelu + Batch Normalization

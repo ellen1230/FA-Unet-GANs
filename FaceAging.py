@@ -196,6 +196,8 @@ class FaceAging(object):
                 self.G_model, self.D_img_model, self.content_model, self.GANs)
             self.loss_Model.compile(optimizer=adam_loss, loss=lambda y_true, y_pred: y_pred,
                                     loss_weights=[self.loss_weights[2], self.loss_weights[3], self.loss_weights[4]])
+
+
             if self.GANs == 'cGAN':
                 # loss model of discriminator on generated + real image
                 self.D_img_model.trainable = True
@@ -208,8 +210,9 @@ class FaceAging(object):
                     loss_val = tf.reduce_mean(tf.sqrt(2 * tf.nn.l2_loss(y_true - y_pred))/ self.size_batch)
                     return loss_val
 
+                self.GD_model.compile(optimizer=adam_GD, loss='mse')
                 self.D_img_model.trainable = True
-                self.D_img_model.compile(optimizer=adam_D_img, loss=mse_loss_LSGAN)
+                self.D_img_model.compile(optimizer=adam_D_img, loss='mse')
 
         # ************************** all model **********************
         else:
@@ -275,7 +278,7 @@ class FaceAging(object):
 
 
                 # batch_random = np.random.uniform(self.image_value_range[0], self.image_value_range[1], size=batch_real_images.shape)
-                # batch_fake_image = self.G_model.predict([batch_random, batch_real_label_age_conv, batch_real_label_name_conv, batch_real_label_gender_conv])
+                # batch_fake_images = self.G_model.predict([batch_random, batch_compare_ages_conv, batch_real_names_conv, batch_real_genders_conv])
                 batch_fake_images = self.G_model.predict([batch_real_images, batch_compare_ages_conv, batch_real_names_conv, batch_real_genders_conv])
                 num_D_last_channel = int(self.size_image / 2 ** (len(self.num_Dimg_channels) - 1)) # D_img_model first&last layer strides=1
 
@@ -284,24 +287,7 @@ class FaceAging(object):
                 imsave(self.save_dir + '/compare/e' + str(epoch) + '_b' + str(index_batch) + '_f.png',(batch_fake_images[0] + 1) / 2)
 
 
-                for D in range(int(self.num_D_img_loss)):
-                    # ************************* start train D_img_model with D_img_loss ****************************
-                    train_batch_x = np.concatenate((batch_compare_images, batch_fake_images, batch_real_images), axis=0)
-                    train_batch_ages_conv = np.concatenate((batch_compare_ages_conv, batch_compare_ages_conv, batch_real_ages_conv), axis=0)
-                    train_batch_names_conv = np.concatenate((batch_real_names_conv, batch_real_names_conv, batch_real_names_conv), axis=0)
-                    train_batch_genders_conv = np.concatenate((batch_real_genders_conv, batch_real_genders_conv, batch_real_genders_conv), axis=0)
-                    # label
-                    train_batch_y = np.concatenate((np.ones(self.size_batch), np.zeros(self.size_batch), np.ones(self.size_batch)), axis=0)
-                    # label ----> Patch D
-                    # A = np.ones((size_batch, num_D_last_channel, num_D_last_channel, 1))
-                    # B = np.zeros((size_batch, num_D_last_channel, num_D_last_channel, 1))
-                    # train_batch_y = np.concatenate((A, B), axis=0)
 
-                    # train D_img
-                    loss_Dimg.append(
-                        self.D_img_model.train_on_batch([train_batch_x, train_batch_ages_conv, train_batch_names_conv, train_batch_genders_conv], train_batch_y))
-                    print('loss_Dimg on b_', index_batch, ' e_', epoch, ' is ', loss_Dimg[-1])
-                    # ************************* end train D_img_model with D_img_loss ****************************
 
                 for all in range(int(self.num_all_loss)):
                     self.D_img_model.trainable = False
@@ -320,7 +306,7 @@ class FaceAging(object):
                             self.loss_Model.train_on_batch([batch_compare_images, batch_fake_images,
                                  batch_compare_ages_conv, batch_real_names_conv, batch_real_genders_conv],
                                 [np.zeros(self.size_batch), np.zeros(self.size_batch), np.zeros(self.size_batch)])
-                        loss_GD.append(loss_GD_batch)
+                        # loss_GD.append(loss_GD_batch)
                         loss_content.append(loss_content_batch)
                         loss_image.append(loss_image_batch)
                         loss_all.append(loss_all_batch)
@@ -328,6 +314,30 @@ class FaceAging(object):
 
                     self.D_img_model.trainable = True
                     # ************************* end train EGD_model with all loss ****************************
+
+
+
+                for D in range(int(self.num_D_img_loss)):
+                    # ************************* start train D_img_model with D_img_loss ****************************
+                    train_batch_x = np.concatenate((batch_compare_images, batch_fake_images), axis=0)
+                    train_batch_ages_conv = np.concatenate((batch_compare_ages_conv, batch_compare_ages_conv), axis=0)
+                    train_batch_names_conv = np.concatenate((batch_real_names_conv, batch_real_names_conv,), axis=0)
+                    train_batch_genders_conv = np.concatenate((batch_real_genders_conv, batch_real_genders_conv), axis=0)
+                    # label
+                    train_batch_y = np.concatenate((np.ones(self.size_batch), np.zeros(self.size_batch)), axis=0)
+                    # label ----> Patch D
+                    # A = np.ones((size_batch, num_D_last_channel, num_D_last_channel, 1))
+                    # B = np.zeros((size_batch, num_D_last_channel, num_D_last_channel, 1))
+                    # train_batch_y = np.concatenate((A, B), axis=0)
+
+                    # train D_img
+                    loss_Dimg.append(
+                        self.D_img_model.train_on_batch([train_batch_x, train_batch_ages_conv, train_batch_names_conv, train_batch_genders_conv], train_batch_y))
+                    loss_GD.append(self.GD_model.train_on_batch([batch_fake_images, batch_compare_ages_conv, batch_real_names_conv, batch_real_genders_conv],
+                                                                np.ones(self.size_batch)))
+                    print('loss_Dimg on b_', index_batch, ' e_', epoch, ' is ', loss_Dimg[-1])
+                    print('loss_GD on b_', index_batch, ' e_', epoch, ' is ', loss_GD[-1])
+                    # ************************* end train D_img_model with D_img_loss ****************************
 
 
                 # *********************************** save images *******************************************
